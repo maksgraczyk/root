@@ -184,7 +184,7 @@ BuildAction(const ColumnNames_t &bl, const std::shared_ptr<::TH1D> &h, const uns
       return std::make_unique<Action_t>(Helper_t(h, nSlots), bl, std::move(prevNode), colRegister);
    } else
 #endif
-      if (hasAxisLimits) {
+   if (hasAxisLimits || !IsImplicitMTEnabled()) {
       using Helper_t = FillHelper<::TH1D>;
       using Action_t = RAction<Helper_t, PrevNodeType, TTraits::TypeList<ColTypes...>>;
       return std::make_unique<Action_t>(Helper_t(h, nSlots), bl, std::move(prevNode), colRegister);
