@@ -3,9 +3,8 @@
 #include "gtest/gtest.h"
 #include "InvariantMassCUDA.h"
 
+#include "TRandom3.h"
 #include <Math/Vector4D.h>
-// #include <Math/LorentzVector.h>
-// #include <Math/PtEtaPhiE4D.h>
 #include <ROOT/RVec.hxx>
 #include <ROOT/TSeq.hxx>
 
@@ -13,37 +12,61 @@ using namespace ROOT::VecOps;
 using namespace ROOT::Math;
 
 // Element-wise comparison between two masses arrays.
+// NOTE: accuracy taken from root/math/vecops/test/vecops_rvec.cxx. Tests start to fail with an accuracy higher than
+// 1e-6
 #define CHECK_MASSES(a, b, n)                                     \
    {                                                              \
       for (auto i : ROOT::TSeqI(n)) {                             \
-         EXPECT_NEAR(a[i], b[i], 1e-4) << "  at index i = " << i; \
+         EXPECT_NEAR(a[i], b[i], 1e-6) << "  at index i = " << i; \
       }                                                           \
    }
 
-TEST(InvariantMassTest, PtEtaPhiEVectorComparison)
-{
-   // Dummy particle collections
-   RVec<double> e1 = {50, 50, 50, 50, 100};
-   RVec<double> pt1 = {0, 5, 5, 10, 10};
-   RVec<double> eta1 = {0.0, 0.0, -1.0, 0.5, 2.5};
-   RVec<double> phi1 = {0.0, 0.0, 0.0, -0.5, -2.4};
+class InvariantMassTestFixture : public ::testing::Test {
+protected:
+   TRandom3 r;
 
-   RVec<double> e2 = {40, 40, 40, 40, 30};
-   RVec<double> pt2 = {0, 5, 5, 10, 2};
-   RVec<double> eta2 = {0.0, 0.0, 0.5, 0.4, 1.2};
-   RVec<double> phi2 = {0.0, 0.0, 0.0, 0.5, 2.4};
+   InvariantMassTestFixture()
+   {
+      r.SetSeed(123); // For reproducability
+   }
+
+   // Taken from root/test/stressVector.cxx
+   RVec<PtEtaPhiEVector> GenRandomVectors(int n)
+   {
+      RVec<PtEtaPhiEVector> vectors(n);
+
+      // generate n -4 momentum quantities
+      for (int i = 0; i < n; ++i) {
+         double phi = r.Rndm() * 3.1415926535897931;
+         double eta = r.Uniform(-5., 5.);
+         double pt = r.Exp(10.);
+         double m = r.Uniform(0, 10.);
+         if (i % 50 == 0)
+            m = r.BreitWigner(1., 0.01);
+
+         double E = sqrt(m * m + pt * pt * cosh(eta) * cosh(eta));
+
+         // fill vectors
+         vectors[i].SetCoordinates(pt, eta, phi, E);
+      }
+
+      return vectors;
+   }
+};
+
+TEST_F(InvariantMassTestFixture, LorentzVectorComparison)
+{
+   const int numMasses = 10000;
 
    // Compute invariant mass of two particle system using both collections
-   auto p1 = new PtEtaPhiEVector[e1.size()];
-   auto p2 = new PtEtaPhiEVector[e1.size()];
-   auto expectedInvMass = new double[e1.size()];
-   for (size_t i = 0; i < e1.size(); i++) {
-      p1[i].SetCoordinates(pt1[i], eta1[i], phi1[i], e1[i]);
-      p2[i].SetCoordinates(pt2[i], eta2[i], phi2[i], e2[i]);
+   auto p1 = this->GenRandomVectors(numMasses);
+   auto p2 = this->GenRandomVectors(numMasses);
+   auto expectedInvMass = RVec<double>(numMasses);
+   for (size_t i = 0; i < numMasses; i++) {
       expectedInvMass[i] = (p1[i] + p2[i]).mass();
    }
 
    const auto CUDAinvMasses =
-      ROOT::Experimental::InvariantMassCUDA<PtEtaPhiE4D<double>>::ComputeInvariantMasses(p1, p2, e1.size());
-   CHECK_MASSES(expectedInvMass, CUDAinvMasses, e1.size());
+      ROOT::Experimental::InvariantMassCUDA<256>::ComputeInvariantMasses(p1.begin(), p2.begin(), numMasses);
+   CHECK_MASSES(expectedInvMass, CUDAinvMasses, numMasses);
 }
