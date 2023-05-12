@@ -21,30 +21,51 @@ auto exception_handler(sycl::exception_list exceptions)
 namespace ROOT {
 namespace Experimental {
 
-class vector_addition;
+class invariant_masses;
 
 double *InvariantMassSYCL(const PtEtaPhiEVector *v1, const PtEtaPhiEVector *v2, size_t size)
 {
    double *invMasses = new double[size];
 
-   sycl::default_selector device_selector;
+   sycl::gpu_selector device_selector;
    sycl::queue queue(device_selector, exception_handler);
-   std::cout << "Running on " << queue.get_device().get_info<sycl::info::device::name>() << "\n";
+   std::cout << "Running InvariantMassSYCL on " << queue.get_device().get_info<sycl::info::device::name>() << "\n";
 
-   sycl::float4 a = {1.0, 2.0, 3.0, 4.0};
-   sycl::float4 b = {4.0, 3.0, 2.0, 1.0};
-   sycl::float4 c = {0.0, 0.0, 0.0, 0.0};
    {
-      sycl::buffer<sycl::float4, 1> a_sycl(&a, sycl::range<1>(1));
-      sycl::buffer<sycl::float4, 1> b_sycl(&b, sycl::range<1>(1));
-      sycl::buffer<sycl::float4, 1> c_sycl(&c, sycl::range<1>(1));
+      sycl::buffer<PtEtaPhiEVector, 1> v1_sycl(v1, sycl::range<1>(size));
+      sycl::buffer<PtEtaPhiEVector, 1> v2_sycl(v2, sycl::range<1>(size));
+      sycl::buffer<double, 1> im_sycl(invMasses, sycl::range<1>(size));
 
       queue.submit([&](sycl::handler &cgh) {
-         auto a_acc = a_sycl.get_access<sycl::access::mode::read>(cgh);
-         auto b_acc = b_sycl.get_access<sycl::access::mode::read>(cgh);
-         auto c_acc = c_sycl.get_access<sycl::access::mode::discard_write>(cgh);
+         auto v1_acc = v1_sycl.get_access<sycl::access::mode::read>(cgh);
+         auto v2_acc = v2_sycl.get_access<sycl::access::mode::read>(cgh);
+         auto im_acc = im_sycl.get_access<sycl::access::mode::discard_write>(cgh);
 
-         cgh.single_task<class vector_addition>([=]() { c_acc[0] = a_acc[0] + b_acc[0]; });
+         cgh.parallel_for<class invariant_masses>(sycl::range<1>(size), [=](sycl::item<1> item) {
+            size_t id = item.get_linear_id();
+            auto const local_v1 = v1_acc[id];
+            auto const local_v2 = v2_acc[id];
+
+            // Conversion from (pt, Eta(), phi, mass) to (x, y, z, e) coordinate system
+            const auto x1 = local_v1.Pt() * sycl::cos(local_v1.Phi());
+            const auto y1 = local_v1.Pt() * sycl::sin(local_v1.Phi());
+            const auto z1 = local_v1.Pt() * sycl::sinh(local_v1.Eta());
+            const auto e1 = local_v1.E();
+
+            const auto x2 = local_v2.Pt() * sycl::cos(local_v2.Phi());
+            const auto y2 = local_v2.Pt() * sycl::sin(local_v2.Phi());
+            const auto z2 = local_v2.Pt() * sycl::sinh(local_v2.Eta());
+            const auto e2 = local_v2.E();
+
+            // Addition of particle four-vector elements
+            const auto e = e1 + e2;
+            const auto x = x1 + x2;
+            const auto y = y1 + y2;
+            const auto z = z1 + z2;
+
+            auto mm = e * e - x * x - y * y - z * z;
+            im_acc[id] = mm < 0 ? -sycl::sqrt(-mm) : sycl::sqrt(mm);
+         });
       });
    }
 
@@ -53,11 +74,6 @@ double *InvariantMassSYCL(const PtEtaPhiEVector *v1, const PtEtaPhiEVector *v2, 
    } catch (sycl::exception const &e) {
       std::cout << "Caught synchronous SYCL exception:\n" << e.what() << std::endl;
    }
-
-   std::cout << "  A { " << a.x() << ", " << a.y() << ", " << a.z() << ", " << a.w() << " }\n"
-             << "+ B { " << b.x() << ", " << b.y() << ", " << b.z() << ", " << b.w() << " }\n"
-             << "------------------\n"
-             << "= C { " << c.x() << ", " << c.y() << ", " << c.z() << ", " << c.w() << " }" << std::endl;
 
    return invMasses;
 }

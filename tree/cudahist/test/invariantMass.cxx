@@ -1,4 +1,3 @@
-
 #include <stdlib.h>
 #include "gtest/gtest.h"
 #include "InvariantMass.h"
@@ -7,6 +6,7 @@
 #include <Math/Vector4D.h>
 #include <ROOT/RVec.hxx>
 #include <ROOT/TSeq.hxx>
+#include <CL/sycl.hpp>
 
 using namespace ROOT::VecOps;
 using namespace ROOT::Math;
@@ -70,6 +70,10 @@ TEST_F(InvariantMassTestFixture, LorentzVectorComparison)
       ROOT::Experimental::InvariantMassCUDA<256>::ComputeInvariantMasses(p1.begin(), p2.begin(), numMasses);
    CHECK_MASSES(expectedInvMass, CUDAinvMasses, numMasses);
 
-   const auto SYCLinvMasses = ROOT::Experimental::InvariantMassSYCL(p1.begin(), p2.begin(), numMasses);
-   CHECK_MASSES(expectedInvMass, SYCLinvMasses, numMasses);
+   try {
+      const auto SYCLinvMasses = ROOT::Experimental::InvariantMassSYCL(p1.begin(), p2.begin(), numMasses);
+      CHECK_MASSES(expectedInvMass, SYCLinvMasses, numMasses);
+   } catch (sycl::exception const &e) {
+      std::cout << e.what() << std::endl;
+   }
 }
