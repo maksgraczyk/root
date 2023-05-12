@@ -151,7 +151,12 @@ endif()
 
 if (cuda)
   target_compile_definitions(ROOTDataFrame PRIVATE ROOT_RDF_CUDA)
-  target_link_libraries(ROOTDataFrame PRIVATE CUDAHist)
+  target_link_libraries(ROOTDataFrame PRIVATE CUDAHist InvariantMassCUDA)
+endif()
+
+if (sycl)
+  target_include_directories(ROOTDataFrame PRIVATE ${ComputeCpp_INCLUDE_DIRS})
+  target_link_libraries(ROOTDataFrame PRIVATE InvariantMassSYCL)
 endif()
 
 if(sqlite)

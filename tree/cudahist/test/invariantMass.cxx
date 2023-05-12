@@ -1,7 +1,7 @@
 
 #include <stdlib.h>
 #include "gtest/gtest.h"
-#include "InvariantMassCUDA.h"
+#include "InvariantMass.h"
 
 #include "TRandom3.h"
 #include <Math/Vector4D.h>
@@ -24,6 +24,8 @@ using namespace ROOT::Math;
 class InvariantMassTestFixture : public ::testing::Test {
 protected:
    TRandom3 r;
+
+   const int numMasses = 10000;
 
    InvariantMassTestFixture()
    {
@@ -56,17 +58,18 @@ protected:
 
 TEST_F(InvariantMassTestFixture, LorentzVectorComparison)
 {
-   const int numMasses = 10000;
-
    // Compute invariant mass of two particle system using both collections
-   auto p1 = this->GenRandomVectors(numMasses);
-   auto p2 = this->GenRandomVectors(numMasses);
+   auto p1 = GenRandomVectors(numMasses);
+   auto p2 = GenRandomVectors(numMasses);
    auto expectedInvMass = RVec<double>(numMasses);
-   for (size_t i = 0; i < numMasses; i++) {
+   for (auto i = 0; i < numMasses; i++) {
       expectedInvMass[i] = (p1[i] + p2[i]).mass();
    }
 
    const auto CUDAinvMasses =
       ROOT::Experimental::InvariantMassCUDA<256>::ComputeInvariantMasses(p1.begin(), p2.begin(), numMasses);
    CHECK_MASSES(expectedInvMass, CUDAinvMasses, numMasses);
+
+   const auto SYCLinvMasses = ROOT::Experimental::InvariantMassSYCL(p1.begin(), p2.begin(), numMasses);
+   CHECK_MASSES(expectedInvMass, SYCLinvMasses, numMasses);
 }
