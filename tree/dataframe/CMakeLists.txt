@@ -150,7 +150,6 @@ if(arrow)
 endif()
 
 if (cuda)
-  target_compile_definitions(ROOTDataFrame PRIVATE ROOT_RDF_CUDA)
   target_link_libraries(ROOTDataFrame PRIVATE CUDAHist InvariantMassCUDA)
 endif()
 

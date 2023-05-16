@@ -66,14 +66,18 @@ TEST_F(InvariantMassTestFixture, LorentzVectorComparison)
       expectedInvMass[i] = (p1[i] + p2[i]).mass();
    }
 
+#ifdef ROOT_RDF_CUDA
    const auto CUDAinvMasses =
       ROOT::Experimental::InvariantMassCUDA<256>::ComputeInvariantMasses(p1.begin(), p2.begin(), numMasses);
    CHECK_MASSES(expectedInvMass, CUDAinvMasses, numMasses);
+#endif
 
+#ifdef ROOT_RDF_SYCL
    try {
       const auto SYCLinvMasses = ROOT::Experimental::InvariantMassSYCL(p1.begin(), p2.begin(), numMasses);
       CHECK_MASSES(expectedInvMass, SYCLinvMasses, numMasses);
    } catch (sycl::exception const &e) {
       std::cout << e.what() << std::endl;
    }
+#endif
 }

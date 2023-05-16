@@ -5,24 +5,34 @@
 # For the list of contributors see $ROOTSYS/README/CREDITS.
 
 ############################################################################
-# CMakeLists.txt file for building ROOT tree/cudahist package
+# CMakeLists.txt file for building ROOT tree/experimental package
 # @author Jolly Chen, CERN
 ############################################################################
 
 if (cuda)
   ROOT_LINKER_LIBRARY(InvariantMassCUDA src/InvariantMassCUDA.cu TYPE SHARED DEPENDENCIES GenVector)
-  target_compile_options(InvariantMassCUDA PRIVATE -g -G -rdc=true -lineinfo --expt-relaxed-constexpr)
+  target_compile_options(InvariantMassCUDA PRIVATE -rdc=true -lineinfo --expt-relaxed-constexpr)
   set_target_properties(InvariantMassCUDA PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  target_compile_definitions(InvariantMassCUDA PUBLIC ROOT_RDF_CUDA)
 
   ROOT_LINKER_LIBRARY(CUDAHist src/RHnCUDA.cu TYPE SHARED DEPENDENCIES MathCore)
-  target_compile_options(CUDAHist PRIVATE -g -G -rdc=true -lineinfo --expt-relaxed-constexpr)
+  target_compile_options(CUDAHist PRIVATE -rdc=true -lineinfo --expt-relaxed-constexpr)
   set_target_properties(CUDAHist PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-endif()
+  target_compile_definitions(CUDAHist PUBLIC ROOT_RDF_CUDA)
+  endif()
 
 if (sycl)
   ROOT_LINKER_LIBRARY(InvariantMassSYCL src/InvariantMassSYCL.cxx TYPE SHARED DEPENDENCIES GenVector)
+  target_compile_definitions(InvariantMassSYCL PUBLIC ROOT_RDF_SYCL)
+  target_compile_options(InvariantMassSYCL PUBLIC -DCL_TARGET_OPENCL_VERSION=120)
+  list(APPEND COMPUTECPP_USER_FLAGS -no-serial-memop)
+
+  if (cuda)
+    target_compile_definitions(InvariantMassSYCL PUBLIC ROOT_RDF_CUDA)
+    list(APPEND COMPUTECPP_USER_FLAGS -DCOMPUTE_CPP_BITCODE=ptx64 -sycl -sycl-target ptx64)
+  endif()
+
   add_sycl_to_target(TARGET InvariantMassSYCL SOURCES src/InvariantMassSYCL.cxx)
-  target_compile_definitions(InvariantMassSYCL PUBLIC CL_TARGET_OPENCL_VERSION=300)
 endif()
 
 ROOT_ADD_TEST_SUBDIRECTORY(test)

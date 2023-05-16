@@ -1690,7 +1690,6 @@ endif()
 #---Check for SYCL-----------------------------------------------------------------------
 
 set(ComputeCpp_DIR CACHE STRING "NOT-FOUND")
-list(APPEND COMPUTECPP_DEVICE_COMPILER_FLAGS -no-serial-memop -DCOMPUTE_CPP_BITCODE=ptx64)
 
 if (sycl)
   if (NOT ComputeCpp_DIR)

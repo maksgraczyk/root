@@ -17,11 +17,12 @@ using ROOT::Math::PtEtaPhiEVector;
 namespace ROOT {
 namespace Experimental {
 
-struct PtEtaPhiE4DCUDA {
+struct PtEtaPhiE4DDevice {
    double fPt, fEta, fPhi, fE;
 };
 
-__global__ void InvariantMassesKernel(const PtEtaPhiE4DCUDA *v1, const PtEtaPhiE4DCUDA *v2, size_t size, double *result)
+__global__ void
+InvariantMassesKernel(const PtEtaPhiE4DDevice *v1, const PtEtaPhiE4DDevice *v2, size_t size, double *result)
 {
    unsigned int tid = threadIdx.x + blockDim.x * blockIdx.x;
    unsigned int stride = blockDim.x * gridDim.x;
@@ -54,18 +55,18 @@ InvariantMassCUDA<BlockSize>::ComputeInvariantMasses(const PtEtaPhiEVector *v1, 
 {
    const int numBlocks = ceil(size / float(BlockSize));
 
-   PtEtaPhiE4DCUDA *dV1 = NULL;
-   ERRCHECK(cudaMalloc((void **)&dV1, size * sizeof(PtEtaPhiE4DCUDA)));
+   PtEtaPhiE4DDevice *dV1 = NULL;
+   ERRCHECK(cudaMalloc((void **)&dV1, size * sizeof(PtEtaPhiE4DDevice)));
 
-   PtEtaPhiE4DCUDA *dV2 = NULL;
-   ERRCHECK(cudaMalloc((void **)&dV2, size * sizeof(PtEtaPhiE4DCUDA)));
+   PtEtaPhiE4DDevice *dV2 = NULL;
+   ERRCHECK(cudaMalloc((void **)&dV2, size * sizeof(PtEtaPhiE4DDevice)));
 
    double *dResult = NULL;
    ERRCHECK(cudaMalloc((void **)&dResult, size * sizeof(double)));
 
-   // NOTE: his assumes that data layout of PtEtaPhiEVector is the same as PtEtaPhiE4DCUDA...
-   ERRCHECK(cudaMemcpy(dV1, v1, size * sizeof(PtEtaPhiE4DCUDA), cudaMemcpyHostToDevice));
-   ERRCHECK(cudaMemcpy(dV2, v2, size * sizeof(PtEtaPhiE4DCUDA), cudaMemcpyHostToDevice));
+   // NOTE: his assumes that data layout of PtEtaPhiEVector is the same as PtEtaPhiE4DDevice...
+   ERRCHECK(cudaMemcpy(dV1, v1, size * sizeof(PtEtaPhiE4DDevice), cudaMemcpyHostToDevice));
+   ERRCHECK(cudaMemcpy(dV2, v2, size * sizeof(PtEtaPhiE4DDevice), cudaMemcpyHostToDevice));
 
    InvariantMassesKernel<<<numBlocks, BlockSize>>>(dV1, dV2, size, dResult);
    cudaDeviceSynchronize();

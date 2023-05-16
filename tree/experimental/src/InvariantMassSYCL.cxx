@@ -27,20 +27,30 @@ double *InvariantMassSYCL(const PtEtaPhiEVector *v1, const PtEtaPhiEVector *v2, 
 {
    double *invMasses = new double[size];
 
+   // Generating a single binary that can operate or different back-ends is only supported in ComputeCpp Professional
+   // Edition...
+#ifdef ROOT_RDF_CUDA
    sycl::gpu_selector device_selector;
-   sycl::queue queue(device_selector, exception_handler);
+#else
+   sycl::cpu_selector device_selector;
+#endif
+
+   static sycl::queue queue(device_selector, exception_handler);
    std::cout << "Running InvariantMassSYCL on " << queue.get_device().get_info<sycl::info::device::name>() << "\n";
 
-   {
+   { // Start of scope, ensures data copied back to host
+     // Create device buffers. The memory is managed by SYCL so we should NOT access these buffers directly.
       sycl::buffer<PtEtaPhiEVector, 1> v1_sycl(v1, sycl::range<1>(size));
       sycl::buffer<PtEtaPhiEVector, 1> v2_sycl(v2, sycl::range<1>(size));
       sycl::buffer<double, 1> im_sycl(invMasses, sycl::range<1>(size));
 
       queue.submit([&](sycl::handler &cgh) {
+         // Get handles to SYCL buffers.
          auto v1_acc = v1_sycl.get_access<sycl::access::mode::read>(cgh);
          auto v2_acc = v2_sycl.get_access<sycl::access::mode::read>(cgh);
          auto im_acc = im_sycl.get_access<sycl::access::mode::discard_write>(cgh);
 
+         // Partitions the vector pairs over available threads and computes the invariant masses.
          cgh.parallel_for<class invariant_masses>(sycl::range<1>(size), [=](sycl::item<1> item) {
             size_t id = item.get_linear_id();
             auto const local_v1 = v1_acc[id];
@@ -67,7 +77,7 @@ double *InvariantMassSYCL(const PtEtaPhiEVector *v1, const PtEtaPhiEVector *v2, 
             im_acc[id] = mm < 0 ? -sycl::sqrt(-mm) : sycl::sqrt(mm);
          });
       });
-   }
+   } // end of scope, ensures data copied back to host
 
    try {
       queue.wait_and_throw();

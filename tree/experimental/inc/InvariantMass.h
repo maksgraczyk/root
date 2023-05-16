@@ -5,5 +5,3 @@
 #include "InvariantMassSYCL.h"
 
 #endif
-
-
