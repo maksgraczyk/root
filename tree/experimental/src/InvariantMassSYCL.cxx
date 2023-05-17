@@ -74,7 +74,7 @@ double *InvariantMassSYCL(const PtEtaPhiEVector *v1, const PtEtaPhiEVector *v2, 
             const auto z = z1 + z2;
 
             auto mm = e * e - x * x - y * y - z * z;
-            im_acc[id] = mm < 0 ? -sycl::sqrt(-mm) : sycl::sqrt(mm);
+            im_acc[id] = sycl::sqrt(mm);
          });
       });
    } // end of scope, ensures data copied back to host
