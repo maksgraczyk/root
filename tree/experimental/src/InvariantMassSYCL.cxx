@@ -1,11 +1,10 @@
 #include <InvariantMassSYCL.h>
-#include <CL/sycl.hpp>
+#include <sycl/sycl.hpp>
 #include <iostream>
 
 #include "Math/Vector4D.h"
 
 using ROOT::Math::PtEtaPhiEVector;
-namespace sycl = cl::sycl;
 
 auto exception_handler(sycl::exception_list exceptions)
 {
@@ -27,16 +26,8 @@ double *InvariantMassSYCL(const PtEtaPhiEVector *v1, const PtEtaPhiEVector *v2, 
 {
    double *invMasses = new double[size];
 
-   // Generating a single binary that can operate or different back-ends is only supported in ComputeCpp Professional
-   // Edition...
-#ifdef ROOT_RDF_CUDA
-   sycl::gpu_selector device_selector;
-#else
-   sycl::cpu_selector device_selector;
-#endif
-
-   static sycl::queue queue(device_selector, exception_handler);
-   std::cout << "Running InvariantMassSYCL on " << queue.get_device().get_info<sycl::info::device::name>() << "\n";
+   static sycl::queue queue(exception_handler);
+   //std::cout << "Running InvariantMassSYCL on " << queue.get_device().get_info<sycl::info::device::name>() << "\n";
 
    { // Start of scope, ensures data copied back to host
      // Create device buffers. The memory is managed by SYCL so we should NOT access these buffers directly.

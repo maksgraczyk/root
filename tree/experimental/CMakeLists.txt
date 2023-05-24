@@ -7,6 +7,7 @@
 ############################################################################
 # CMakeLists.txt file for building ROOT tree/experimental package
 # @author Jolly Chen, CERN
+# @author Maksymilian Graczyk, CERN
 ############################################################################
 
 if (cuda)
@@ -19,17 +20,15 @@ if (cuda)
   target_compile_options(CUDAHist PRIVATE -rdc=true -lineinfo --expt-relaxed-constexpr)
   set_target_properties(CUDAHist PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
   target_compile_definitions(CUDAHist PUBLIC ROOT_RDF_CUDA)
-  endif()
+endif()
 
 if (sycl)
+  find_package(OpenSYCL REQUIRED)
   ROOT_LINKER_LIBRARY(InvariantMassSYCL src/InvariantMassSYCL.cxx TYPE SHARED DEPENDENCIES GenVector)
   target_compile_definitions(InvariantMassSYCL PUBLIC ROOT_RDF_SYCL)
-  target_compile_options(InvariantMassSYCL PUBLIC -DCL_TARGET_OPENCL_VERSION=120)
-  list(APPEND COMPUTECPP_USER_FLAGS -no-serial-memop)
 
   if (cuda)
     target_compile_definitions(InvariantMassSYCL PUBLIC ROOT_RDF_CUDA)
-    list(APPEND COMPUTECPP_USER_FLAGS -DCOMPUTE_CPP_BITCODE=ptx64 -sycl -sycl-target ptx64)
   endif()
 
   add_sycl_to_target(TARGET InvariantMassSYCL SOURCES src/InvariantMassSYCL.cxx)
