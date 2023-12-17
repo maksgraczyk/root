@@ -636,7 +636,8 @@ const char *TAxis::GetTicks() const
 {
    if (TestBit(kTickPlus) && TestBit(kTickMinus)) return "+-";
    if (TestBit(kTickMinus)) return "-";
-   return "+";
+   if (TestBit(kTickPlus)) return "+";
+   return "";
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1100,6 +1101,7 @@ void TAxis::SetRangeUser(Double_t ufirst, Double_t ulast)
 ///  option = "+"  ticks drawn on the "positive side" (default)
 ///  option = "-"  ticks drawn on the "negative side"
 ///  option = "+-" ticks drawn on both sides
+///  option = "" ticks not drawn
 
 void TAxis::SetTicks(Option_t *option)
 {
