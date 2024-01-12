@@ -23,7 +23,7 @@ if (cuda)
 endif()
 
 if (sycl)
-  find_package(OpenSYCL REQUIRED)
+  find_package(AdaptiveCpp REQUIRED)
   ROOT_LINKER_LIBRARY(InvariantMassSYCL src/InvariantMassSYCL.cxx TYPE SHARED DEPENDENCIES GenVector)
   target_compile_definitions(InvariantMassSYCL PUBLIC ROOT_RDF_SYCL)
 
