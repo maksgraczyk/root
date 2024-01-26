@@ -26,7 +26,7 @@ double *InvariantMassSYCL(const PtEtaPhiEVector *v1, const PtEtaPhiEVector *v2, 
 {
    double *invMasses = new double[size];
 
-   static sycl::queue queue(exception_handler);
+   static sycl::queue queue(sycl::cpu_selector{});
    //std::cout << "Running InvariantMassSYCL on " << queue.get_device().get_info<sycl::info::device::name>() << "\n";
 
    { // Start of scope, ensures data copied back to host
